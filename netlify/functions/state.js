@@ -14,7 +14,7 @@
    (?session=webstore-julio, ?session=equipo-x-agosto, etc).
    Si no se manda ?session=, se usa "default".
    ============================================================ */
-const { getStore } = require("@netlify/blobs");
+const { getStore, connectLambda } = require("@netlify/blobs");
 const { initialState, applyOp } = require("../../shared/reducer.js");
 
 function cleanSessionId(raw) {
@@ -24,6 +24,19 @@ function cleanSessionId(raw) {
 }
 
 exports.handler = async (event) => {
+  // Esta función usa la firma clásica de Netlify Functions ("Lambda
+  // compatibility mode"). En ese modo Netlify NO inyecta el contexto de
+  // Blobs automáticamente por sí solo — hay que conectarlo a mano con
+  // connectLambda(event), pasándole el mismo evento que recibe el handler,
+  // ANTES de llamar a getStore(). Con esto no hace falta ningún token ni
+  // variable de entorno manual, ni para deploys por Git ni por drag&drop.
+  try {
+    connectLambda(event);
+  } catch (e) {
+    // Si por algún motivo no hay contexto para conectar, seguimos:
+    // getStore() más abajo va a devolver un error claro igual.
+  }
+
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
@@ -42,14 +55,9 @@ exports.handler = async (event) => {
 
   let store;
   try {
-    // En sitios deployados por Git o por la Netlify CLI, Netlify inyecta
-    // automáticamente el contexto de Blobs (siteID + token) en la función.
-    // En algunos deploys manuales (arrastrar y soltar) esa inyección
-    // automática no llega, y getStore() sin datos tira "The environment
-    // has not been configured to use Netlify Blobs". Por eso, si existen
-    // las variables de entorno BLOBS_SITE_ID / BLOBS_TOKEN (configuradas
-    // a mano en Site configuration → Environment variables), las usamos
-    // explícitamente como respaldo.
+    // Respaldo manual por si connectLambda no alcanza en algún entorno
+    // particular: si existen BLOBS_SITE_ID / BLOBS_TOKEN como variables
+    // de entorno, se usan explícitamente.
     const storeOpts = { name: "pitstop-sessions" };
     if (process.env.BLOBS_SITE_ID && process.env.BLOBS_TOKEN) {
       storeOpts.siteID = process.env.BLOBS_SITE_ID;
@@ -62,7 +70,7 @@ exports.handler = async (event) => {
       headers,
       body: JSON.stringify({
         error:
-          "No se pudo inicializar Netlify Blobs. Si este sitio se deployó arrastrando la carpeta, configurá las variables de entorno BLOBS_SITE_ID y BLOBS_TOKEN en Site configuration → Environment variables (ver COMO_DEPLOYAR.md).",
+          "No se pudo inicializar Netlify Blobs. Verificá que la función se haya redeployado con la última versión del código (connectLambda). Si el problema persiste, configurá BLOBS_SITE_ID y BLOBS_TOKEN en Site configuration → Environment variables (ver COMO_DEPLOYAR.md).",
         detail: String((err && err.message) || err),
       }),
     };
