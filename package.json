@@ -1,0 +1,9 @@
+{
+  "name": "pitstop-webstore-retro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Board interactivo de la retro Webstore (Pit Stop / Colapinto), con estado compartido vía Netlify Blobs.",
+  "dependencies": {
+    "@netlify/blobs": "^10.7.9"
+  }
+}
