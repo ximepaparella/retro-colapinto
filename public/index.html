@@ -261,22 +261,22 @@ const CONTENT = {
     subtitle: "Retro de mitad de recorrido · inspirada en Franco Colapinto y la F1",
     badges: ["90 min", "100% remota", "Un solo equipo"]
   },
-  intro: "Desde abril armamos esto de cero: nos sumamos como equipo, hicimos onboarding, entendimos el producto y ya venimos avanzando con entregas en el camino. Esta no es una retro de “somos lentos” — es una parada en boxes de mitad de temporada para mirar el recorrido juntos: qué nos acelera, qué nos frena, y cómo lo ve cada uno.",
-  footer: "Board de referencia para la retro Webstore. Los textos se editan en el objeto CONTENT, arriba en el código.",
+  intro: "Desde abril armamos esto de cero: nos sumamos como equipo, hicimos onboarding, entendimos el producto y ya venimos avanzando con entregas en el camino. Esta es una retro para frenar, analizar en perspectiva el trabajo realizado hasta ahora, individual y grupal — es una parada en boxes de mitad de temporada para mirar el recorrido juntos: qué nos acelera, qué nos frena, y cómo lo ve cada uno.",
+  footer: "",
   zones: [
     {
       id: "zone0", num: 0, icon: "flag", color: "#ff3e9a", title: "Parrilla de largada",
       subtitle: "Chequeo de energía, uno por uno", time: "7 min",
-      hint: "Ubicá tu auto en el velocímetro según tu energía de hoy — no la del proyecto, la tuya. Todos al mismo tiempo y en silencio, para que nadie copie al primero que habla."
+      hint: "Ubicá tu auto en el velocímetro según tu energía — no la del proyecto, la tuya. Todos al mismo tiempo y en silencio, para que nadie copie al primero que habla."
     },
     {
       id: "zone1", num: 1, icon: "pulse", color: "#00a3e0", title: "Telemetría: vuelta estimada vs. real",
       subtitle: "Cómo veo el ritmo, cada uno con lo suyo", time: "17 min",
-      hint: "Tres post-its por persona, en silencio: cómo pensé que iba a ir, cómo fue en realidad, y si veo esa diferencia también en el equipo. Arrastrá los post-its para reordenarlos o moverlos de columna, y marcalos como leídos con el círculo de la esquina a medida que los repasás. Después, grupos de a tres armados entre Célula Listing y Célula Home.",
+      hint: "Tres post-its por persona, en silencio: cómo pensé que iba a ir, cómo fue en realidad, y si veo esa diferencia también en el equipo. Arrastrá los post-its para reordenarlos o moverlos de columna.",
       columns: [
         { label: "Mi vuelta estimada" },
         { label: "Mi vuelta real" },
-        { label: "Lo veo también en el equipo" }
+        { label: "La vuelta del equipo" }
       ],
       addLabel: "+ agregar post-it"
     },
@@ -303,7 +303,7 @@ const CONTENT = {
     {
       id: "zone5", num: 4, icon: "trophy", color: "#12b76a", title: "Estrategia para la próxima carrera",
       subtitle: "Proponemos, votamos y confirmamos el podio", time: "10 min",
-      hint: "Escribí entre 1 y 3 paradas propias (qué ajuste le harías al auto) y guardalas. Van a aparecer más abajo para que todo el equipo vote con la bandera a cuadros 🏁. Cuando terminen de votar, confirmá el podio: ahí suben las 3 más votadas y completamos cuándo se hacen, quién las lleva adelante y qué ganancia esperamos.",
+      hint: "Escribí entre 1 y 3 paradas propias y/o para el equipo (qué ajuste le harías al auto, a la estrategia, a las herramientas) y guardalas. Van a aparecer más abajo para que todo el equipo vote con la bandera a cuadros 🏁. Cuando terminen de votar, confirmá el podio: ahí suben las 3 más votadas y completamos cuándo se hacen, quién las lleva adelante y qué ganancia esperamos.",
       draftLabel: "Tus paradas (entre 1 y 3)",
       draftPh: "qué ajuste le harías al auto",
       saveDraftsLabel: "💾 Guardar mis paradas",
@@ -1254,7 +1254,7 @@ async function boot(){
     console.error('No se pudo cargar el estado inicial de la sesión', e);
     setSyncStatus(false);
   }
-  setInterval(pollOnce, 3000);
+  setInterval(pollOnce, 1500);
 }
 
 async function pollOnce(){
