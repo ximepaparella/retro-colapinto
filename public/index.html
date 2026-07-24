@@ -47,57 +47,6 @@
   .tool-btn:hover{background:rgba(255,255,255,.16);}
   .sync-indicator{display:flex;align-items:center;gap:5px;font-size:11px;color:#b9c4d0;}
   .sync-dot{width:8px;height:8px;border-radius:50%;background:#12b76a;display:inline-block;transition:background .2s;}
-  function radioMessageHtml(radio){
-    return '<div class="radio-card">'+
-      '<div class="radio-top"><span class="radio-ticket">MSG-'+String(radio.n || 1).padStart(2,'0')+'</span>'+
-      '<span class="radio-live"><i class="live-dot"></i>en el aire</span>'+
-      '<span class="radio-status">enviado</span><div class="wave"><i></i><i></i><i></i><i></i><i></i></div></div>'+
-      '<div class="radio-body">'+
-      '<div class="radio-summary">'+
-        '<b>Para:</b> '+esc(radio.para || '—')+'\n'+
-        '<b>Mensaje:</b> '+esc(radio.mensaje || '—')+'\n'+
-        '<b>De:</b> '+esc(radio.de || '—')+
-      '</div>'+
-      '</div></div>';
-  }
-
-  function syncRadio(list){
-    const box = document.getElementById('radiobox');
-    if(!box) return;
-    if(!list || list.length === 0){
-      box.innerHTML = '<p class="gallery-empty">Todavía no hay mensajes enviados.</p>';
-      return;
-    }
-    box.innerHTML = list.map(r=>radioMessageHtml(r)).join('');
-  }
-
-  document.getElementById('addRadio').addEventListener('click', async ()=>{
-    const z3 = CONTENT.zones.find(z=>z.id==='zone3');
-    const toInput = document.getElementById('radioTo');
-    const messageInput = document.getElementById('radioMessage');
-    const fromInput = document.getElementById('radioFrom');
-    const para = (toInput.value || '').trim();
-    const mensaje = (messageInput.value || '').trim();
-    const de = (fromInput.value || '').trim();
-    if(!mensaje){
-      alert('Escribí el mensaje antes de enviarlo.');
-      return;
-    }
-    const state = await sendOp('radio_add', {
-      id: genId('radio'),
-      n: (document.getElementById('radiobox').querySelectorAll('.radio-card').length || 0) + 1,
-      para: para || z3.paraPh,
-      mensaje: mensaje,
-      de: de || z3.dePh
-    });
-    if(state){
-      toInput.value = '';
-      messageInput.value = '';
-      fromInput.value = '';
-      syncRadio(state.radio);
-      messageInput.focus();
-    }
-  });
   .podium .step small{display:block;font-weight:500;font-family:var(--font-body);font-size:10.5px;margin-top:6px;color:var(--muted);}
   .podium .step.p1{background:linear-gradient(180deg,#fff,#fdf3d9);height:150px;border:1px solid #f3dfa0;justify-content:flex-start;}
   .podium .step.p2{background:linear-gradient(180deg,#fff,#eef0f2);height:122px;border:1px solid var(--line);justify-content:flex-start;}
@@ -769,46 +718,55 @@ function syncNotesZone(zoneId, list){
 /* ============================================================
    RADIO AL BOX
    ============================================================ */
-function mountRadioCard(el, id){
-  el.dataset.id = id;
-  const fields = el.querySelectorAll('.radio-field .field');
-  const keys = ['para','mensaje','de'];
-  fields.forEach((f, i)=>{
-    f.addEventListener('blur', ()=>{
-      sendOp('radio_edit', { id: id, field: keys[i], text: f.textContent.trim() });
-    });
-  });
+function radioMessageHtml(radio){
+  return '<div class="radio-card">'+
+    '<div class="radio-top"><span class="radio-ticket">MSG-'+String(radio.n || 1).padStart(2,'0')+'</span>'+
+    '<span class="radio-live"><i class="live-dot"></i>en el aire</span>'+
+    '<span class="radio-status">enviado</span><div class="wave"><i></i><i></i><i></i><i></i><i></i></div></div>'+
+    '<div class="radio-body">'+
+      '<div class="radio-summary">'+
+        '<b>Para:</b> '+esc(radio.para || '—')+'\n'+
+        '<b>Mensaje:</b> '+esc(radio.mensaje || '—')+'\n'+
+        '<b>De:</b> '+esc(radio.de || '—')+
+      '</div>'+
+    '</div></div>';
 }
+
 function syncRadio(list){
   const box = document.getElementById('radiobox');
-  const z3 = CONTENT.zones.find(z=>z.id==='zone3');
-  list.forEach(r=>{
-    let el = box.querySelector('.radio-card[data-id="'+r.id+'"]');
-    if(!el){
-      const holder = document.createElement('div');
-      holder.innerHTML = radioCardHtml(z3, r.n);
-      el = holder.firstElementChild;
-      mountRadioCard(el, r.id);
-      box.appendChild(el);
-    }
-    const fields = el.querySelectorAll('.radio-field .field');
-    const vals = [r.para, r.mensaje, r.de];
-    fields.forEach((f,i)=>{
-      if(document.activeElement !== f && f.textContent !== (vals[i]||'')) f.textContent = vals[i] || '';
-    });
-  });
+  if(!box) return;
+  if(!list || list.length === 0){
+    box.innerHTML = '<p class="gallery-empty">Todavía no hay mensajes enviados.</p>';
+    return;
+  }
+  box.innerHTML = list.map(r=>radioMessageHtml(r)).join('');
 }
-document.getElementById('addRadio').addEventListener('click', ()=>{
+document.getElementById('addRadio').addEventListener('click', async ()=>{
   const z3 = CONTENT.zones.find(z=>z.id==='zone3');
-  const box = document.getElementById('radiobox');
-  const n = box.querySelectorAll('.radio-card').length + 1;
-  const id = genId('radio');
-  const holder = document.createElement('div');
-  holder.innerHTML = radioCardHtml(z3, n);
-  const el = holder.firstElementChild;
-  mountRadioCard(el, id);
-  box.appendChild(el);
-  sendOp('radio_add', { id: id, n: n, para: z3.paraPh, mensaje: z3.msgPh, de: z3.dePh });
+  const toInput = document.getElementById('radioTo');
+  const messageInput = document.getElementById('radioMessage');
+  const fromInput = document.getElementById('radioFrom');
+  const para = (toInput.value || '').trim();
+  const mensaje = (messageInput.value || '').trim();
+  const de = (fromInput.value || '').trim();
+  if(!mensaje){
+    alert('Escribí el mensaje antes de enviarlo.');
+    return;
+  }
+  const state = await sendOp('radio_add', {
+    id: genId('radio'),
+    n: (document.getElementById('radiobox').querySelectorAll('.radio-card').length || 0) + 1,
+    para: para || z3.paraPh,
+    mensaje: mensaje,
+    de: de || z3.dePh
+  });
+  if(state){
+    toInput.value = '';
+    messageInput.value = '';
+    fromInput.value = '';
+    syncRadio(state.radio);
+    messageInput.focus();
+  }
 });
 
 /* ============================================================
@@ -1401,13 +1359,13 @@ function fullRender(state){
 }
 
 async function ensureSeed(state){
-  if(state.radio.length === 0){
+  if((state.epoch || 0) === 0 && state.radio.length === 0){
     const z3 = CONTENT.zones.find(z=>z.id==='zone3');
     const s2 = await apiPost({ type:'radio_add', payload:{ id:'radio-seed-1', n:1, para:z3.paraPh, mensaje:z3.msgPh, de:z3.dePh, userId: MY_USER_ID } });
     if(s2) state = s2;
   }
   const z4 = CONTENT.zones.find(z=>z.id==='zone4');
-  if(z4 && state.telem.length === 0){
+  if(z4 && (state.epoch || 0) === 0 && state.telem.length === 0){
     for(let i=1;i<=3;i++){
       const s3 = await apiPost({ type:'telem_add', payload:{ id:'telem-seed-'+i, firma:z4.firmaDefault, text:z4.starter, userId: MY_USER_ID } });
       if(s3) state = s3;
@@ -1462,7 +1420,12 @@ document.getElementById('disconnectBtn').addEventListener('click', async ()=>{
 document.getElementById('resetSessionBtn').addEventListener('click', async ()=>{
   if(!confirm('¿Reiniciar toda la sesión? Se borran notas, votos, radio y podio para todo el equipo. No se puede deshacer.')) return;
   clearSavedUser();
-  await sendOp('reset_session', {});
+  const state = await sendOp('reset_session', {});
+  if(state){
+    __epoch = state.epoch;
+    __lastRevision = typeof state.revision === 'number' ? state.revision : 0;
+    fullRender(state);
+  }
   location.reload();
 });
 document.getElementById('exportSessionBtn').addEventListener('click', ()=>{
