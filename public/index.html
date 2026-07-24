@@ -433,6 +433,8 @@ function getSessionId(){
 const MY_USER_ID = getOrCreateUserId();
 const SESSION_ID = getSessionId();
 const API_BASE = '/api/state?session=' + encodeURIComponent(SESSION_ID);
+const POLL_INTERVAL_MS = 1800;
+const PRESENCE_PING_MS = 8000;
 
 async function apiGet(){
   const res = await fetch(API_BASE, { cache: 'no-store' });
@@ -451,6 +453,7 @@ async function apiPost(op){
 async function sendOp(type, payload){
   try{
     const state = await apiPost({ type: type, payload: Object.assign({ userId: MY_USER_ID }, payload) });
+    if(state) fullRender(state);
     setSyncStatus(true);
     return state;
   }catch(e){
@@ -1262,7 +1265,7 @@ try{
    Se actualiza sola con cada ping (cada ~5s) y se puede minimizar
    para que no moleste durante la retro.
    ============================================================ */
-const ONLINE_THRESHOLD_MS = 9000; // un poco más que el intervalo de ping, para tolerar algún ping perdido
+const ONLINE_THRESHOLD_MS = 20000; // tolera tabs en background, throttling del navegador y algo de jitter de red
 
 function buildPresenceWidget(){
   const widget = document.createElement('div');
@@ -1318,6 +1321,11 @@ async function pingPresence(){
   if(!currentUser) return;
   await sendOp('presence_ping', { name: currentUser.name, color: currentUser.color });
 }
+
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'visible') pingPresence();
+});
+window.addEventListener('focus', ()=>{ pingPresence(); });
 
 /* ============================================================
    TIMERS SINCRONIZADOS POR ETAPA — cuando se acaba el tiempo,
@@ -1417,8 +1425,12 @@ document.querySelectorAll('.zt-reset').forEach(btn=>{
    ============================================================ */
 let __epoch = null;
 let __polling = false;
+let __lastRevision = -1;
 
 function fullRender(state){
+  const incomingRevision = typeof state.revision === 'number' ? state.revision : 0;
+  if(incomingRevision < __lastRevision) return;
+  __lastRevision = incomingRevision;
   if(window.__syncGauge) window.__syncGauge(state.gauge);
   syncNotesZone('zone1', state.notes.zone1);
   syncNotesZone('zone2', state.notes.zone2);
@@ -1450,6 +1462,7 @@ async function boot(){
   try{
     let state = await apiGet();
     __epoch = state.epoch;
+    __lastRevision = typeof state.revision === 'number' ? state.revision : 0;
     state = await ensureSeed(state);
     fullRender(state);
     setSyncStatus(true);
@@ -1457,9 +1470,9 @@ async function boot(){
     console.error('No se pudo cargar el estado inicial de la sesión', e);
     setSyncStatus(false);
   }
-  setInterval(pollOnce, 800);
+  setInterval(pollOnce, POLL_INTERVAL_MS);
   pingPresence();
-  setInterval(pingPresence, 5000);
+  setInterval(pingPresence, PRESENCE_PING_MS);
 }
 
 async function pollOnce(){

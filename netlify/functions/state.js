@@ -47,7 +47,11 @@ function sleep(ms) {
 async function readState(store, key, sessionId) {
   const existing = await store.getWithMetadata(key, { type: "json" });
   if (existing && existing.data) {
-    return { state: existing.data, etag: existing.etag };
+    const state = existing.data;
+    if (typeof state.revision !== "number") {
+      state.revision = 0;
+    }
+    return { state, etag: existing.etag };
   }
   return { state: initialState(sessionId), etag: null };
 }
@@ -200,6 +204,7 @@ exports.handler = async (event) => {
             ts: new Date().toISOString(),
           });
         }
+        next.revision = (typeof state.revision === "number" ? state.revision : 0) + 1;
         return next;
       });
 

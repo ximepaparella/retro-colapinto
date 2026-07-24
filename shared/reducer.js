@@ -23,6 +23,7 @@ function initialState(sessionId) {
     schemaVersion: SCHEMA_VERSION,
     sessionId: sessionId || "default",
     epoch: 0,
+    revision: 0,
     createdAt: ts,
     updatedAt: ts,
     // zone0 — velocímetro: 1 marca por usuario
