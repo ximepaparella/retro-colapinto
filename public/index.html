@@ -443,14 +443,17 @@ async function apiGet(){
   if(!res.ok) throw new Error('GET falló: ' + res.status);
   return res.json();
 }
-async function apiPost(op){
+async function apiPostBody(body){
   const res = await fetch(API_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ op })
+    body: JSON.stringify(body)
   });
   if(!res.ok) throw new Error('POST falló: ' + res.status);
   return res.json();
+}
+async function apiPost(op){
+  return apiPostBody({ op });
 }
 async function sendOp(type, payload){
   __pendingOps++;
@@ -461,6 +464,25 @@ async function sendOp(type, payload){
     return state;
   }catch(e){
     console.error('No se pudo sincronizar la acción "'+type+'"', e);
+    setSyncStatus(false);
+    return null;
+  }finally{
+    __pendingOps = Math.max(0, __pendingOps - 1);
+  }
+}
+async function sendOps(ops){
+  __pendingOps++;
+  try{
+    const bodyOps = ops.map(op=>({
+      type: op.type,
+      payload: Object.assign({ userId: MY_USER_ID }, op.payload || {})
+    }));
+    const state = await apiPostBody({ ops: bodyOps });
+    if(state) fullRender(state);
+    setSyncStatus(true);
+    return state;
+  }catch(e){
+    console.error('No se pudo sincronizar el lote de acciones', e);
     setSyncStatus(false);
     return null;
   }finally{
@@ -546,6 +568,7 @@ function radioCardHtml(z, n){
     '<div class="radio-field"><span class="ico">'+iconSvg('person',17)+'</span><div class="field" contenteditable="true">'+esc(z.paraPh)+'</div></div>'+
     '<div class="radio-field"><span class="ico">'+iconSvg('message',17)+'</span><div class="field" contenteditable="true">'+esc(z.msgPh)+'</div></div>'+
     '<div class="radio-field"><span class="ico">'+iconSvg('pen',17)+'</span><div class="field" contenteditable="true">'+esc(z.dePh)+'</div></div>'+
+    '<button type="button" class="radio-add radio-save" style="width:100%;margin-top:12px">Enviar mensaje</button>'+
     '</div></div>';
 }
 
@@ -859,15 +882,86 @@ function syncNotesZone(zoneId, list){
 /* ============================================================
    RADIO AL BOX
    ============================================================ */
-function mountRadioCard(el, id){
-  el.dataset.id = id;
+const radioDrafts = Object.create(null);
+
+function readRadioFields(el){
   const fields = el.querySelectorAll('.radio-field .field');
-  const keys = ['para','mensaje','de'];
-  fields.forEach((f, i)=>{
-    f.addEventListener('blur', ()=>{
-      sendOp('radio_edit', { id: id, field: keys[i], text: f.textContent.trim() });
+  return {
+    para: (fields[0] && fields[0].textContent || '').trim(),
+    mensaje: (fields[1] && fields[1].textContent || '').trim(),
+    de: (fields[2] && fields[2].textContent || '').trim()
+  };
+}
+
+function writeRadioFields(el, radio){
+  const fields = el.querySelectorAll('.radio-field .field');
+  const vals = [radio.para, radio.mensaje, radio.de];
+  fields.forEach((f,i)=>{
+    if(f.textContent !== (vals[i] || '')) f.textContent = vals[i] || '';
+  });
+}
+
+function setRadioSaveLabel(el){
+  const btn = el.querySelector('.radio-save');
+  if(!btn) return;
+  const draft = radioDrafts[el.dataset.id] || {};
+  btn.textContent = draft.isNew ? 'Enviar mensaje' : 'Guardar cambios';
+}
+
+function markRadioDraft(el, extra){
+  const id = el.dataset.id;
+  radioDrafts[id] = Object.assign({}, radioDrafts[id] || {}, extra || {}, {
+    dirty: true,
+    values: readRadioFields(el)
+  });
+  setRadioSaveLabel(el);
+}
+
+function mountRadioCard(el, id, opts){
+  opts = opts || {};
+  el.dataset.id = id;
+  el.dataset.n = String(opts.n || 0);
+  if(!radioDrafts[id]) radioDrafts[id] = { dirty: false, isNew: !!opts.isNew, values: readRadioFields(el) };
+  else radioDrafts[id].isNew = !!opts.isNew;
+  const fields = el.querySelectorAll('.radio-field .field');
+  fields.forEach((f)=>{
+    f.addEventListener('input', ()=>{
+      markRadioDraft(el, { isNew: !!radioDrafts[id].isNew });
     });
   });
+  const saveBtn = el.querySelector('.radio-save');
+  if(saveBtn){
+    saveBtn.addEventListener('click', async ()=>{
+      const draft = radioDrafts[id] || { isNew: !!opts.isNew };
+      const values = readRadioFields(el);
+      if(!values.mensaje){
+        alert('Escribí el mensaje antes de enviarlo.');
+        return;
+      }
+      let state = null;
+      if(draft.isNew){
+        state = await sendOp('radio_add', {
+          id: id,
+          n: parseInt(el.dataset.n, 10) || 1,
+          para: values.para,
+          mensaje: values.mensaje,
+          de: values.de
+        });
+      } else {
+        state = await sendOps([
+          { type: 'radio_edit', payload: { id: id, field: 'para', text: values.para } },
+          { type: 'radio_edit', payload: { id: id, field: 'mensaje', text: values.mensaje } },
+          { type: 'radio_edit', payload: { id: id, field: 'de', text: values.de } }
+        ]);
+      }
+      if(state){
+        radioDrafts[id] = { dirty: false, isNew: false, values: values };
+        setRadioSaveLabel(el);
+        syncRadio(state.radio);
+      }
+    });
+  }
+  setRadioSaveLabel(el);
 }
 function syncRadio(list){
   const box = document.getElementById('radiobox');
@@ -878,14 +972,15 @@ function syncRadio(list){
       const holder = document.createElement('div');
       holder.innerHTML = radioCardHtml(z3, r.n);
       el = holder.firstElementChild;
-      mountRadioCard(el, r.id);
+      mountRadioCard(el, r.id, { isNew: false, n: r.n });
       box.appendChild(el);
     }
-    const fields = el.querySelectorAll('.radio-field .field');
-    const vals = [r.para, r.mensaje, r.de];
-    fields.forEach((f,i)=>{
-      if(document.activeElement !== f && f.textContent !== (vals[i]||'')) f.textContent = vals[i] || '';
-    });
+    el.dataset.n = String(r.n || 0);
+    const draft = radioDrafts[r.id];
+    if(draft && draft.dirty) return;
+    writeRadioFields(el, r);
+    radioDrafts[r.id] = { dirty: false, isNew: false, values: readRadioFields(el) };
+    setRadioSaveLabel(el);
   });
 }
 document.getElementById('addRadio').addEventListener('click', ()=>{
@@ -896,9 +991,10 @@ document.getElementById('addRadio').addEventListener('click', ()=>{
   const holder = document.createElement('div');
   holder.innerHTML = radioCardHtml(z3, n);
   const el = holder.firstElementChild;
-  mountRadioCard(el, id);
+  mountRadioCard(el, id, { isNew: true, n: n });
   box.appendChild(el);
-  sendOp('radio_add', { id: id, n: n, para: z3.paraPh, mensaje: z3.msgPh, de: z3.dePh });
+  const messageField = el.querySelectorAll('.radio-field .field')[1];
+  if(messageField) messageField.focus();
 });
 
 /* ============================================================
