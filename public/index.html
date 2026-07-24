@@ -206,6 +206,36 @@
   .pitboard .field{background:rgba(255,255,255,.08);border-radius:6px;padding:7px 9px;font-size:12.5px;min-height:18px;outline:none;}
   .pitboard .field:focus{background:rgba(255,255,255,.14);}
   footer{text-align:center;color:var(--faint);font-size:12px;padding:24px 20px 40px;}
+
+  /* --- timer sincronizado por etapa --- */
+  .zone-timer{display:flex;align-items:center;gap:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 12px;margin-bottom:14px;flex-wrap:wrap;transition:background .2s,border-color .2s;}
+  .zt-icon{font-size:14px;}
+  .zt-display{font-family:var(--font-head);font-weight:700;font-size:16px;letter-spacing:.5px;min-width:56px;color:var(--ink);}
+  .zt-btn{border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;cursor:pointer;transition:background .15s,transform .1s;}
+  .zt-btn:hover{background:var(--surface-2);}
+  .zt-btn:active{transform:scale(.95);}
+  .zt-btn.zt-reset{padding:5px 9px;}
+  .zone-timer.running{background:var(--pink-bg);border-color:var(--pink);}
+  .zone-timer.running .zt-display{color:var(--pink-dark);}
+  .zone-timer.done{background:#ffe1e1;border-color:#ff4d6d;animation:timerPulse 1s ease-in-out infinite;}
+  .zone-timer.done .zt-display{color:#c81e3a;}
+  @keyframes timerPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,109,.35);}50%{box-shadow:0 0 0 6px rgba(255,77,109,0);}}
+
+  /* --- ventana flotante de pilotos conectados --- */
+  .presence-widget{position:fixed;right:18px;bottom:18px;z-index:500;background:var(--navy);color:#fff;border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.35);width:230px;overflow:hidden;font-family:var(--font-body);transition:width .2s,height .2s;}
+  .presence-head{display:flex;align-items:center;gap:8px;padding:11px 12px;cursor:pointer;background:rgba(255,255,255,.06);user-select:none;}
+  .presence-head b{font-family:var(--font-head);font-size:13px;flex:1;letter-spacing:.2px;}
+  .presence-count{background:var(--pink);font-family:var(--font-head);font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;}
+  .presence-toggle{font-size:11px;color:#b9c4d0;transition:transform .2s;}
+  .presence-widget.minimized .presence-body{display:none;}
+  .presence-widget.minimized .presence-toggle{transform:rotate(180deg);}
+  .presence-body{max-height:260px;overflow-y:auto;padding:6px 10px 10px;}
+  .presence-row{display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:12.5px;}
+  .presence-dot{width:8px;height:8px;border-radius:50%;background:#3a4a5c;flex-shrink:0;}
+  .presence-row.online .presence-dot{background:var(--green);box-shadow:0 0 0 3px rgba(18,183,106,.25);}
+  .presence-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .presence-row.offline{opacity:.45;}
+  .presence-empty{color:#8fa2b8;font-size:12px;padding:6px 2px;}
 </style>
 </head>
 <body>
@@ -261,22 +291,22 @@ const CONTENT = {
     subtitle: "Retro de mitad de recorrido · inspirada en Franco Colapinto y la F1",
     badges: ["90 min", "100% remota", "Un solo equipo"]
   },
-  intro: "Desde abril armamos esto de cero: nos sumamos como equipo, hicimos onboarding, entendimos el producto y ya venimos avanzando con entregas en el camino. Esta es una retro para frenar, analizar en perspectiva el trabajo realizado hasta ahora, individual y grupal — es una parada en boxes de mitad de temporada para mirar el recorrido juntos: qué nos acelera, qué nos frena, y cómo lo ve cada uno.",
-  footer: "",
+  intro: "Desde abril armamos esto de cero: nos sumamos como equipo, hicimos onboarding, entendimos el producto y ya venimos avanzando con entregas en el camino. Esta no es una retro de “somos lentos” — es una parada en boxes de mitad de temporada para mirar el recorrido juntos: qué nos acelera, qué nos frena, y cómo lo ve cada uno.",
+  footer: "Board de referencia para la retro Webstore. Los textos se editan en el objeto CONTENT, arriba en el código.",
   zones: [
     {
       id: "zone0", num: 0, icon: "flag", color: "#ff3e9a", title: "Parrilla de largada",
       subtitle: "Chequeo de energía, uno por uno", time: "7 min",
-      hint: "Ubicá tu auto en el velocímetro según tu energía — no la del proyecto, la tuya. Todos al mismo tiempo y en silencio, para que nadie copie al primero que habla."
+      hint: "Ubicá tu auto en el velocímetro según tu energía de hoy — no la del proyecto, la tuya. Todos al mismo tiempo y en silencio, para que nadie copie al primero que habla."
     },
     {
       id: "zone1", num: 1, icon: "pulse", color: "#00a3e0", title: "Telemetría: vuelta estimada vs. real",
       subtitle: "Cómo veo el ritmo, cada uno con lo suyo", time: "17 min",
-      hint: "Tres post-its por persona, en silencio: cómo pensé que iba a ir, cómo fue en realidad, y si veo esa diferencia también en el equipo. Arrastrá los post-its para reordenarlos o moverlos de columna.",
+      hint: "Tres post-its por persona, en silencio: cómo pensé que iba a ir, cómo fue en realidad, y si veo esa diferencia también en el equipo. Arrastrá los post-its para reordenarlos o moverlos de columna, y marcalos como leídos con el círculo de la esquina a medida que los repasás. Después, grupos de a tres armados entre Célula Listing y Célula Home.",
       columns: [
         { label: "Mi vuelta estimada" },
         { label: "Mi vuelta real" },
-        { label: "La vuelta del equipo" }
+        { label: "Lo veo también en el equipo" }
       ],
       addLabel: "+ agregar post-it"
     },
@@ -303,7 +333,7 @@ const CONTENT = {
     {
       id: "zone5", num: 4, icon: "trophy", color: "#12b76a", title: "Estrategia para la próxima carrera",
       subtitle: "Proponemos, votamos y confirmamos el podio", time: "10 min",
-      hint: "Escribí entre 1 y 3 paradas propias y/o para el equipo (qué ajuste le harías al auto, a la estrategia, a las herramientas) y guardalas. Van a aparecer más abajo para que todo el equipo vote con la bandera a cuadros 🏁. Cuando terminen de votar, confirmá el podio: ahí suben las 3 más votadas y completamos cuándo se hacen, quién las lleva adelante y qué ganancia esperamos.",
+      hint: "Escribí entre 1 y 3 paradas propias (qué ajuste le harías al auto) y guardalas. Van a aparecer más abajo para que todo el equipo vote con la bandera a cuadros 🏁. Cuando terminen de votar, confirmá el podio: ahí suben las 3 más votadas y completamos cuándo se hacen, quién las lleva adelante y qué ganancia esperamos.",
       draftLabel: "Tus paradas (entre 1 y 3)",
       draftPh: "qué ajuste le harías al auto",
       saveDraftsLabel: "💾 Guardar mis paradas",
@@ -452,9 +482,27 @@ function zoneHead(z){
     '<span class="zsub">'+iconSvg(z.icon,15)+esc(z.subtitle)+'</span></div><div class="time">'+esc(z.time)+'</div></div>';
 }
 
+/* Timer sincronizado por etapa: todos ven la misma cuenta regresiva,
+   calculada localmente a partir de un endsAt absoluto que viaja en el
+   estado compartido (no hace falta sincronizar el "tick", solo el
+   momento en el que termina). */
+function parseMinutes(timeStr){
+  const m = /(\d+)/.exec(timeStr || '');
+  return m ? parseInt(m[1], 10) : 5;
+}
+function timerWidgetHtml(z){
+  const mins = parseMinutes(z.time);
+  return '<div class="zone-timer" data-zone="'+z.id+'">'+
+    '<span class="zt-icon">⏱️</span>'+
+    '<span class="zt-display" id="timerDisplay-'+z.id+'">'+String(mins).padStart(2,'0')+':00</span>'+
+    '<button type="button" class="zt-btn zt-start" data-zone="'+z.id+'" data-mins="'+mins+'">▶️ Iniciar '+mins+' min</button>'+
+    '<button type="button" class="zt-btn zt-reset" data-zone="'+z.id+'" title="Reiniciar timer">⟲</button>'+
+    '</div>';
+}
+
 function renderZone0(z){
   return '<div class="zone" id="'+z.id+'">'+zoneHead(z)+
-    '<div class="zone-body"><p class="hint">'+esc(z.hint)+'</p>'+
+    '<div class="zone-body">'+timerWidgetHtml(z)+'<p class="hint">'+esc(z.hint)+'</p>'+
     '<div class="gauge-wrap"><svg id="gaugeSvg" viewBox="0 0 300 175"></svg>'+
     '<div class="gauge-readout" id="gaugeReadout">Clickeá el velocímetro para marcar tu energía — un auto por persona, podés reubicarlo las veces que quieras</div>'+
     '<div class="gauge-chips" id="gaugeChips"></div></div></div></div>';
@@ -466,7 +514,7 @@ function renderZone1(z){
     '<button class="add" data-zone="zone1" data-col="'+i+'">'+esc(z.addLabel)+'</button></div>'
   ).join('');
   return '<div class="zone" id="'+z.id+'">'+zoneHead(z)+
-    '<div class="zone-body"><p class="hint">'+esc(z.hint)+'</p><div class="cols c3">'+cols+'</div></div></div>';
+    '<div class="zone-body">'+timerWidgetHtml(z)+'<p class="hint">'+esc(z.hint)+'</p><div class="cols c3">'+cols+'</div></div></div>';
 }
 
 function renderZone2(z){
@@ -477,7 +525,7 @@ function renderZone2(z){
   ).join('');
   const legend = TAGS.map(t=>'<div class="litem"><span class="lpill" style="background:'+t.line+'">'+t.emoji+' '+esc(t.label)+'</span><span>'+esc(t.desc)+'</span></div>').join('');
   return '<div class="zone" id="'+z.id+'">'+zoneHead(z)+
-    '<div class="zone-body"><p class="hint">'+esc(z.hint)+'</p><div class="cols c3">'+stations+'</div>'+
+    '<div class="zone-body">'+timerWidgetHtml(z)+'<p class="hint">'+esc(z.hint)+'</p><div class="cols c3">'+stations+'</div>'+
     '<div class="legend">'+legend+'</div></div></div>';
 }
 
@@ -495,7 +543,7 @@ function radioCardHtml(z, n){
 
 function renderZone3(z){
   return '<div class="zone" id="'+z.id+'">'+zoneHead(z)+
-    '<div class="zone-body"><p class="hint">'+esc(z.hint)+'</p>'+
+    '<div class="zone-body">'+timerWidgetHtml(z)+'<p class="hint">'+esc(z.hint)+'</p>'+
     '<div class="postbox" id="radiobox"></div>'+
     '<button class="radio-add" id="addRadio" style="margin-top:12px">'+esc(z.addLabel)+'</button></div></div>';
 }
@@ -521,7 +569,7 @@ function draftCardHtml(z, n){
 function renderZone5(z){
   const drafts = [1,2,3].map(n=>draftCardHtml(z,n)).join('');
   return '<div class="zone" id="'+z.id+'">'+zoneHead(z)+
-    '<div class="zone-body"><p class="hint">'+esc(z.hint)+'</p>'+
+    '<div class="zone-body">'+timerWidgetHtml(z)+'<p class="hint">'+esc(z.hint)+'</p>'+
     '<h3 class="subhead">'+esc(z.draftLabel)+'</h3>'+
     '<div class="pitboards" id="draftBoards">'+drafts+'</div>'+
     '<button class="add" id="saveDrafts" style="margin:12px 0 26px">'+esc(z.saveDraftsLabel)+'</button>'+
@@ -584,6 +632,7 @@ function setUser(user){
   currentUser = user;
   try{ localStorage.setItem('pitstopUser', JSON.stringify(user)); }catch(e){}
   renderMeBadge();
+  pingPresence();
 }
 
 function renderMeBadge(){
@@ -1209,6 +1258,158 @@ try{
 })();
 
 /* ============================================================
+   VENTANA FLOTANTE DE PILOTOS — quién está conectado al board.
+   Se actualiza sola con cada ping (cada ~5s) y se puede minimizar
+   para que no moleste durante la retro.
+   ============================================================ */
+const ONLINE_THRESHOLD_MS = 9000; // un poco más que el intervalo de ping, para tolerar algún ping perdido
+
+function buildPresenceWidget(){
+  const widget = document.createElement('div');
+  widget.className = 'presence-widget';
+  widget.id = 'presenceWidget';
+  let minimized = false;
+  try{ minimized = localStorage.getItem('pitstopPresenceMin') === '1'; }catch(e){}
+  if(minimized) widget.classList.add('minimized');
+  widget.innerHTML = '<div class="presence-head" id="presenceHead">'+
+    '<span>🏎️</span><b>Pilotos en pista</b>'+
+    '<span class="presence-count" id="presenceCount">0</span>'+
+    '<span class="presence-toggle">▾</span></div>'+
+    '<div class="presence-body" id="presenceBody"><p class="presence-empty">Todavía nadie se identificó.</p></div>';
+  document.body.appendChild(widget);
+  widget.querySelector('#presenceHead').addEventListener('click', ()=>{
+    widget.classList.toggle('minimized');
+    try{ localStorage.setItem('pitstopPresenceMin', widget.classList.contains('minimized') ? '1' : '0'); }catch(e){}
+  });
+  return widget;
+}
+buildPresenceWidget();
+
+let lastPresenceData = {};
+function renderPresence(presence){
+  lastPresenceData = presence || {};
+  const body = document.getElementById('presenceBody');
+  const countEl = document.getElementById('presenceCount');
+  if(!body || !countEl) return;
+  const entries = Object.entries(lastPresenceData);
+  if(entries.length === 0){
+    body.innerHTML = '<p class="presence-empty">Todavía nadie se identificó.</p>';
+    countEl.textContent = '0';
+    return;
+  }
+  entries.sort((a,b)=> (a[1].name||'').localeCompare(b[1].name||''));
+  const now = Date.now();
+  let onlineCount = 0;
+  body.innerHTML = entries.map(([uid, u])=>{
+    const online = (now - new Date(u.lastSeen).getTime()) < ONLINE_THRESHOLD_MS;
+    if(online) onlineCount++;
+    return '<div class="presence-row '+(online?'online':'offline')+'">'+
+      '<span class="presence-dot"></span>'+
+      helmetSvg(u.color, 18)+
+      '<span class="presence-name">'+esc(u.name)+(online?'':' (desconectado)')+'</span>'+
+      '</div>';
+  }).join('');
+  countEl.textContent = String(onlineCount) + '/' + entries.length;
+}
+// Refresca online/offline aunque no llegue estado nuevo: el tiempo sigue pasando.
+setInterval(()=> renderPresence(lastPresenceData), 2000);
+
+async function pingPresence(){
+  if(!currentUser) return;
+  await sendOp('presence_ping', { name: currentUser.name, color: currentUser.color });
+}
+
+/* ============================================================
+   TIMERS SINCRONIZADOS POR ETAPA — cuando se acaba el tiempo,
+   se expone. El "reloj" real vive en el servidor (endsAt); cada
+   cliente sólo calcula localmente cuánto falta, así que no hace
+   falta tráfico de red por segundo.
+   ============================================================ */
+let lastTimersData = {};
+const notifiedDoneZones = new Set();
+
+function formatMMSS(totalSec){
+  const s = Math.max(0, Math.round(totalSec));
+  const m = Math.floor(s/60);
+  const r = s%60;
+  return String(m).padStart(2,'0')+':'+String(r).padStart(2,'0');
+}
+
+function beepTimerDone(){
+  try{
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return;
+    const ctx = new Ctx();
+    [0, 0.18].forEach((delay, i)=>{
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = i === 0 ? 880 : 1046;
+      gain.gain.setValueAtTime(0.001, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.16);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.18);
+    });
+  }catch(e){ /* algunos navegadores bloquean audio sin interacción previa: no pasa nada */ }
+}
+
+function tickTimers(){
+  Object.keys(lastTimersData).forEach(zoneId=>{
+    const t = lastTimersData[zoneId];
+    const wrap = document.querySelector('.zone-timer[data-zone="'+zoneId+'"]');
+    const display = document.getElementById('timerDisplay-'+zoneId);
+    if(!wrap || !display || !t) return;
+    const remainingSec = (new Date(t.endsAt).getTime() - Date.now()) / 1000;
+    if(remainingSec > 0){
+      wrap.classList.add('running');
+      wrap.classList.remove('done');
+      display.textContent = formatMMSS(remainingSec);
+      notifiedDoneZones.delete(zoneId);
+    } else {
+      wrap.classList.remove('running');
+      wrap.classList.add('done');
+      display.textContent = '¡Tiempo! 🏁';
+      if(!notifiedDoneZones.has(zoneId)){
+        notifiedDoneZones.add(zoneId);
+        beepTimerDone();
+      }
+    }
+  });
+}
+setInterval(tickTimers, 1000);
+
+function syncTimers(timers){
+  lastTimersData = timers || {};
+  // Los timers que ya no están activos (reset) vuelven a mostrar el valor de arranque.
+  document.querySelectorAll('.zone-timer').forEach(wrap=>{
+    const zoneId = wrap.dataset.zone;
+    if(!lastTimersData[zoneId]){
+      wrap.classList.remove('running','done');
+      const z = CONTENT.zones.find(zz=>zz.id===zoneId);
+      const display = document.getElementById('timerDisplay-'+zoneId);
+      if(display && z) display.textContent = String(parseMinutes(z.time)).padStart(2,'0')+':00';
+      notifiedDoneZones.delete(zoneId);
+    }
+  });
+  tickTimers();
+}
+
+document.querySelectorAll('.zt-start').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const zoneId = btn.dataset.zone;
+    const mins = parseInt(btn.dataset.mins, 10) || 5;
+    sendOp('timer_start', { zoneId: zoneId, durationSec: mins*60 });
+  });
+});
+document.querySelectorAll('.zt-reset').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    sendOp('timer_reset', { zoneId: btn.dataset.zone });
+  });
+});
+
+/* ============================================================
    ARRANQUE: carga el estado desde el servidor, siembra los
    valores por defecto de radio/repaso la primera vez que se usa
    la sesión, pinta todo, y arranca el polling cada 3s para ver
@@ -1225,6 +1426,8 @@ function fullRender(state){
   syncTelem(state.telem);
   if(window.__syncGallery) window.__syncGallery(state.zone5.gallery);
   if(window.__renderPodiumFromState) window.__renderPodiumFromState(state.zone5);
+  renderPresence(state.presence);
+  syncTimers(state.timers);
 }
 
 async function ensureSeed(state){
@@ -1255,6 +1458,8 @@ async function boot(){
     setSyncStatus(false);
   }
   setInterval(pollOnce, 800);
+  pingPresence();
+  setInterval(pingPresence, 5000);
 }
 
 async function pollOnce(){

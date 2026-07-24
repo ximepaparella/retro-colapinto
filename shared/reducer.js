@@ -48,6 +48,14 @@ function initialState(sessionId) {
       confirmed: false,
       podium: [], // { galleryId, text, votes, cuando, responsable, ganancia }
     },
+    // quiénes están (o estuvieron) conectados al board
+    presence: {
+      // [userId]: { name, color, lastSeen }
+    },
+    // timers sincronizados por etapa/zona
+    timers: {
+      // [zoneId]: { endsAt, durationSec }
+    },
   };
 }
 
@@ -84,10 +92,44 @@ function moveNote(list, id, col, beforeId) {
 function applyOp(state, op) {
   if (!op || typeof op.type !== "string") return state;
   const s = clone(state);
+  // Migración defensiva: estados guardados antes de agregar presencia/
+  // timers no van a tener estas claves. Las inicializamos acá para que
+  // cualquier op (no solo las nuevas) funcione sobre estados viejos.
+  if (!s.presence) s.presence = {};
+  if (!s.timers) s.timers = {};
   const p = op.payload || {};
   const ts = op.ts || nowIso();
 
   switch (op.type) {
+    /* ---------- presencia: quién está conectado ---------- */
+    case "presence_ping": {
+      if (!p.userId) break;
+      s.presence[p.userId] = {
+        name: p.name || "Piloto",
+        color: p.color || "#ff3e9a",
+        lastSeen: ts,
+      };
+      break;
+    }
+
+    /* ---------- timers sincronizados por etapa ---------- */
+    case "timer_start": {
+      if (!p.zoneId) break;
+      const durationSec =
+        typeof p.durationSec === "number" && p.durationSec > 0
+          ? p.durationSec
+          : 300;
+      s.timers[p.zoneId] = {
+        endsAt: new Date(new Date(ts).getTime() + durationSec * 1000).toISOString(),
+        durationSec,
+      };
+      break;
+    }
+    case "timer_reset": {
+      if (!p.zoneId) break;
+      delete s.timers[p.zoneId];
+      break;
+    }
     /* ---------- zone0: velocímetro ---------- */
     case "gauge_set": {
       if (!p.userId) break;
@@ -253,6 +295,9 @@ function applyOp(state, op) {
       const fresh = initialState(s.sessionId);
       fresh.createdAt = s.createdAt;
       fresh.epoch = (s.epoch || 0) + 1;
+      // La gente sigue conectada aunque se reinicie el contenido: no
+      // tiene sentido que desaparezcan de la lista de presencia.
+      fresh.presence = s.presence;
       return { ...fresh, updatedAt: ts };
     }
 
