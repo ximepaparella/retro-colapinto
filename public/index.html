@@ -148,8 +148,11 @@
 
   .postbox{min-height:140px;background:var(--navy);border-radius:var(--r-lg);padding:18px;display:flex;flex-direction:column;gap:12px;}
   .radio-card{background:var(--navy-2);color:#dbe6f0;border-radius:var(--r-md);padding:0;border:1px solid rgba(255,255,255,.08);animation:noteIn .25s ease;overflow:hidden;}
+  .radio-card.saved{border-color:rgba(18,183,106,.55);box-shadow:0 0 0 1px rgba(18,183,106,.22) inset;}
   .radio-top{display:flex;align-items:center;gap:10px;padding:9px 13px;background:rgba(0,0,0,.18);}
   .radio-ticket{font-family:var(--font-head);font-weight:700;font-size:11.5px;letter-spacing:.5px;background:var(--pink);color:#fff;padding:3px 8px;border-radius:5px;}
+  .radio-status{margin-left:auto;font-size:10.5px;font-weight:700;letter-spacing:.3px;color:#9fb0c2;text-transform:uppercase;}
+  .radio-card.saved .radio-status{color:#12b76a;}
   .radio-live{display:flex;align-items:center;font-size:10.5px;color:#9fb0c2;text-transform:uppercase;letter-spacing:.4px;}
   .live-dot{width:7px;height:7px;border-radius:50%;background:#ff4d6d;display:inline-block;margin-right:5px;animation:livepulse 1.4s ease-in-out infinite;}
   @keyframes livepulse{0%,100%{opacity:1;}50%{opacity:.4;}}
@@ -563,7 +566,7 @@ function radioCardHtml(z, n){
   return '<div class="radio-card">'+
     '<div class="radio-top"><span class="radio-ticket">MSG-'+String(n).padStart(2,'0')+'</span>'+
     '<span class="radio-live"><i class="live-dot"></i>en el aire</span>'+
-    '<div class="wave"><i></i><i></i><i></i><i></i><i></i></div></div>'+
+    '<span class="radio-status">borrador</span><div class="wave"><i></i><i></i><i></i><i></i><i></i></div></div>'+
     '<div class="radio-body">'+
     '<div class="radio-field"><span class="ico">'+iconSvg('person',17)+'</span><div class="field" contenteditable="true">'+esc(z.paraPh)+'</div></div>'+
     '<div class="radio-field"><span class="ico">'+iconSvg('message',17)+'</span><div class="field" contenteditable="true">'+esc(z.msgPh)+'</div></div>'+
@@ -908,6 +911,22 @@ function setRadioSaveLabel(el){
   btn.textContent = draft.isNew ? 'Enviar mensaje' : 'Guardar cambios';
 }
 
+function setRadioSavedState(el, saved){
+  const fields = el.querySelectorAll('.radio-field .field');
+  const btn = el.querySelector('.radio-save');
+  const status = el.querySelector('.radio-status');
+  el.classList.toggle('saved', !!saved);
+  fields.forEach(f=>{
+    f.setAttribute('contenteditable', saved ? 'false' : 'true');
+  });
+  if(btn){
+    btn.textContent = saved ? 'Editar mensaje' : 'Enviar mensaje';
+  }
+  if(status){
+    status.textContent = saved ? 'enviado' : 'borrador';
+  }
+}
+
 function markRadioDraft(el, extra){
   const id = el.dataset.id;
   radioDrafts[id] = Object.assign({}, radioDrafts[id] || {}, extra || {}, {
@@ -956,12 +975,15 @@ function mountRadioCard(el, id, opts){
       }
       if(state){
         radioDrafts[id] = { dirty: false, isNew: false, values: values };
+        setRadioSavedState(el, true);
         setRadioSaveLabel(el);
+        writeRadioFields(el, values);
         syncRadio(state.radio);
       }
     });
   }
   setRadioSaveLabel(el);
+  setRadioSavedState(el, false);
 }
 function syncRadio(list){
   const box = document.getElementById('radiobox');
@@ -980,6 +1002,7 @@ function syncRadio(list){
     if(draft && draft.dirty) return;
     writeRadioFields(el, r);
     radioDrafts[r.id] = { dirty: false, isNew: false, values: readRadioFields(el) };
+    setRadioSavedState(el, true);
     setRadioSaveLabel(el);
   });
 }
