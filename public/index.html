@@ -1254,7 +1254,7 @@ async function boot(){
     console.error('No se pudo cargar el estado inicial de la sesión', e);
     setSyncStatus(false);
   }
-  setInterval(pollOnce, 1500);
+  setInterval(pollOnce, 800);
 }
 
 async function pollOnce(){
