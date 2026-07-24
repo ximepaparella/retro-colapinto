@@ -202,6 +202,7 @@ function applyOp(state, op) {
     /* ---------- zone3: radio al box ---------- */
     case "radio_add": {
       if (!p.id) break;
+      if (!String(p.mensaje || "").trim()) break;
       if (findIndex(s.radio, p.id) !== -1) break;
       s.radio.push({
         id: p.id,

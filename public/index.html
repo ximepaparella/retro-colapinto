@@ -47,159 +47,57 @@
   .tool-btn:hover{background:rgba(255,255,255,.16);}
   .sync-indicator{display:flex;align-items:center;gap:5px;font-size:11px;color:#b9c4d0;}
   .sync-dot{width:8px;height:8px;border-radius:50%;background:#12b76a;display:inline-block;transition:background .2s;}
-  .intro{max-width:1180px;margin:22px auto 0;padding:0 20px;}
-  .intro p{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--pink);border-radius:var(--r-md);padding:16px 20px;font-size:14px;line-height:1.6;color:var(--muted);margin:0;}
+  function radioMessageHtml(radio){
+    return '<div class="radio-card">'+
+      '<div class="radio-top"><span class="radio-ticket">MSG-'+String(radio.n || 1).padStart(2,'0')+'</span>'+
+      '<span class="radio-live"><i class="live-dot"></i>en el aire</span>'+
+      '<span class="radio-status">enviado</span><div class="wave"><i></i><i></i><i></i><i></i><i></i></div></div>'+
+      '<div class="radio-body">'+
+      '<div class="radio-summary">'+
+        '<b>Para:</b> '+esc(radio.para || '—')+'\n'+
+        '<b>Mensaje:</b> '+esc(radio.mensaje || '—')+'\n'+
+        '<b>De:</b> '+esc(radio.de || '—')+
+      '</div>'+
+      '</div></div>';
+  }
 
-  .track-nav{position:sticky;top:0;z-index:30;background:rgba(238,240,243,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);padding:6px 20px 2px;}
-  .track-wrap{max-width:1180px;margin:0 auto;}
-  .track-wrap svg{width:100%;height:64px;display:block;overflow:visible;}
-  .track-point{cursor:pointer;}
-  .tp-circle{fill:var(--surface);stroke:var(--line);stroke-width:2;transition:stroke .2s,fill .2s,r .2s;}
-  .tp-num{font-family:var(--font-head);font-size:11px;font-weight:700;fill:var(--muted);text-anchor:middle;pointer-events:none;transition:fill .2s;}
-  .track-point.active .tp-circle{fill:var(--pink);stroke:var(--pink);r:16;}
-  .track-point.active .tp-num{fill:#fff;}
-  .track-point:hover .tp-circle{stroke:var(--faint);}
-  #trackCar{transition:transform .5s cubic-bezier(.4,0,.2,1);}
+  function syncRadio(list){
+    const box = document.getElementById('radiobox');
+    if(!box) return;
+    if(!list || list.length === 0){
+      box.innerHTML = '<p class="gallery-empty">Todavía no hay mensajes enviados.</p>';
+      return;
+    }
+    box.innerHTML = list.map(r=>radioMessageHtml(r)).join('');
+  }
 
-  main{max-width:1180px;margin:0 auto;padding:20px 20px 70px;}
-  .zone{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--zc,var(--pink));border-radius:var(--r-lg);margin-bottom:22px;overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.03),0 8px 24px rgba(16,24,40,.05);scroll-margin-top:76px;opacity:0;animation:fadeInUp .55s ease forwards;transition:transform .2s ease,box-shadow .2s ease;}
-  .zone:hover{transform:translateY(-3px);box-shadow:0 2px 6px rgba(16,24,40,.05),0 16px 34px rgba(16,24,40,.09);}
-  @keyframes fadeInUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
-  .zone-head{display:flex;align-items:center;gap:14px;padding:18px 22px;border-bottom:1px solid var(--line);}
-  .num{width:38px;height:38px;border-radius:50%;background:var(--zc,var(--navy));color:#fff;font-family:var(--font-head);font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-  .zone-title-wrap{min-width:0;}
-  .zone-head h2{margin:0;font-family:var(--font-head);font-size:20px;font-weight:700;letter-spacing:.2px;}
-  .zone-head .zsub{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:3px;}
-  .zsub svg{flex-shrink:0;color:var(--zc,var(--pink));}
-  .time{margin-left:auto;background:var(--surface-2);border:1px solid var(--line);color:var(--ink);font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;white-space:nowrap;font-family:var(--font-head);flex-shrink:0;}
-  .zone-body{padding:20px 22px 24px;}
-  .hint{font-size:13.5px;color:var(--muted);margin:0 0 16px;line-height:1.6;}
-  .cols{display:grid;gap:14px;}
-  .cols.c3{grid-template-columns:repeat(3,1fr);}
-  @media(max-width:860px){.cols.c3{grid-template-columns:1fr;} header h1{font-size:28px;} .hero-car{display:none;} .speedlines{display:none;} .car-number{font-size:100px;}}
-  .station{border:1px solid var(--line);background:var(--surface-2);border-radius:var(--r-md);padding:12px;min-height:190px;display:flex;flex-direction:column;transition:border-color .2s;}
-  .station:focus-within{border-color:var(--zc,var(--pink));}
-  .station h3{font-family:var(--font-head);font-size:15px;font-weight:700;margin:0 0 3px;}
-  .station .desc{display:block;font-weight:400;font-family:var(--font-body);color:var(--muted);font-size:11.5px;margin-bottom:8px;}
-  .notes{flex:1;display:flex;flex-wrap:wrap;align-content:flex-start;gap:8px;border-radius:var(--r-sm);transition:background .15s,outline .15s;padding:2px;}
-  .notes.dragover{background:rgba(10,168,194,.08);outline:2px dashed var(--faint);}
-
-  .stnote{width:calc(50% - 5px);aspect-ratio:1/1;border-radius:var(--r-sm);overflow:hidden;box-shadow:0 1px 2px rgba(16,24,40,.06);transition:opacity .15s,box-shadow .15s;display:flex;flex-direction:column;}
-  .stnote.dragging{position:fixed;z-index:999;pointer-events:none;box-shadow:0 10px 24px rgba(16,24,40,.28);opacity:.9;}
-  .stnote-bar{display:flex;align-items:center;gap:6px;padding:4px 6px;background:rgba(0,0,0,.05);flex-shrink:0;}
-  .grip{cursor:grab;color:var(--faint);font-size:11px;padding:0 3px;touch-action:none;user-select:none;letter-spacing:-1px;}
-  .grip:active{cursor:grabbing;}
-  .tagpill{border:none;border-radius:10px;font-size:9.5px;font-weight:700;padding:3px 7px;cursor:pointer;white-space:nowrap;transition:transform .1s;}
-  .tagpill:active{transform:scale(.95);}
-  .read-toggle{margin-left:auto;border:none;background:transparent;cursor:pointer;font-size:13px;color:var(--faint);width:21px;height:21px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,color .15s;}
-  .read-toggle:hover{background:rgba(0,0,0,.07);}
-  .stnote.read .read-toggle{color:#fff;background:var(--green);}
-  .stnote.read .stnote-text{opacity:.5;text-decoration:line-through;}
-  .stnote.read{opacity:.75;}
-  .stnote-text{flex:1;padding:8px 9px;font-size:12px;line-height:1.4;outline:none;background:#fff9d6;overflow-y:auto;}
-  .stnote-text:focus{box-shadow:inset 0 0 0 2px rgba(0,0,0,.08);}
-
-  .join-overlay{position:fixed;inset:0;background:rgba(4,10,20,.72);backdrop-filter:blur(3px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;}
-  .join-card{background:var(--surface);border-radius:20px;padding:28px;max-width:420px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.4);}
-  .join-card h3{font-family:var(--font-head);font-size:23px;margin:0 0 4px;}
-  .join-card p{font-size:13px;color:var(--muted);margin:0 0 16px;line-height:1.5;}
-  .join-card input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-family:var(--font-body);margin-bottom:16px;outline:none;}
-  .join-card input:focus{border-color:var(--pink);}
-  .avatar-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
-  .avatar-opt{border:2px solid var(--line);border-radius:12px;padding:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--surface-2);transition:border-color .15s,background .15s,transform .1s;}
-  .avatar-opt:hover{transform:translateY(-2px);}
-  .avatar-opt.selected{border-color:var(--pink);background:var(--pink-bg);}
-  .me-badge{position:absolute;top:22px;right:26px;z-index:2;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);padding:5px 14px 5px 6px;border-radius:20px;color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;backdrop-filter:blur(4px);}
-  .me-badge:hover{background:rgba(255,255,255,.16);}
-  .gauge-tooltip{position:fixed;background:var(--navy);color:#fff;font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:6px;pointer-events:none;z-index:600;opacity:0;transition:opacity .1s;white-space:nowrap;transform:translate(-50%,-100%);}
-  .gauge-tooltip.show{opacity:1;}
-
-  .subhead{font-family:var(--font-head);font-size:13.5px;font-weight:700;margin:4px 0 10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
-  .gallery{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:6px;}
-  .gallery-empty{color:var(--muted);font-size:13px;margin:0 0 10px;}
-  .gallery-card{flex:1 1 200px;max-width:calc(33.333% - 10px);}
-  @media(max-width:860px){.gallery-card{max-width:100%;}}
-  .gallery-card.winner{box-shadow:0 0 0 2px var(--gold);}
-  .gallery-card.not-winner{opacity:.55;}
-  .pb-action{background:rgba(255,255,255,.08);border-radius:6px;padding:7px 9px;font-size:12.5px;line-height:1.4;margin-bottom:2px;}
-  .winner-badge{display:inline-block;background:var(--gold);color:#4a3a00;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;margin-bottom:8px;font-family:var(--font-head);letter-spacing:.2px;}
-  .flag-vote{margin-top:10px;width:100%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.22);color:#fff;border-radius:8px;padding:8px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,transform .1s;}
-  .flag-vote:hover{background:rgba(255,255,255,.18);}
-  .flag-vote:active{transform:scale(.97);}
-  .flag-vote .count{background:var(--pink);padding:0 8px;border-radius:10px;font-family:var(--font-head);}
-  .flag-vote .count.pulse{animation:pop .35s ease;}
-  .pb-details{margin-top:10px;padding-top:10px;border-top:1px dashed rgba(255,255,255,.18);}
-  .plabel{font-size:10.5px;color:var(--muted);margin-top:6px;line-height:1.35;padding:0 6px;word-break:break-word;}
-
-  .legend{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 16px;font-size:12px;color:var(--muted);margin-top:14px;}
-  @media(max-width:860px){.legend{grid-template-columns:1fr;}}
-  .legend .litem{display:flex;gap:8px;align-items:flex-start;}
-  .legend .lpill{flex-shrink:0;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;color:#fff;white-space:nowrap;}
-  .add{margin-top:9px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);font-size:12px;font-weight:600;padding:7px;color:var(--muted);cursor:pointer;transition:background .15s,border-color .15s,transform .1s;}
-  .add:hover{background:var(--surface-2);border-color:var(--faint);}
-  .add:active{transform:scale(.96);}
-
-  .gauge-wrap{background:radial-gradient(ellipse at 50% 0%,#123f73,var(--navy) 70%);border-radius:var(--r-lg);padding:20px 18px 8px;display:flex;flex-direction:column;align-items:center;}
-  .gauge-wrap svg{width:100%;max-width:420px;height:auto;cursor:crosshair;overflow:visible;}
-  .gauge-readout{font-family:var(--font-head);color:#fff;font-size:14px;margin:6px 0 12px;letter-spacing:.3px;}
-  .gauge-chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 4px 16px;justify-content:center;}
-  .chip{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.22);color:#fff;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:14px;animation:noteIn .25s ease;}
-  @keyframes noteIn{from{opacity:0;transform:translateY(6px) scale(.96);}to{opacity:1;transform:translateY(0) scale(1);}}
-
-  .postbox{min-height:140px;background:var(--navy);border-radius:var(--r-lg);padding:18px;display:flex;flex-direction:column;gap:12px;}
-  .radio-card{background:var(--navy-2);color:#dbe6f0;border-radius:var(--r-md);padding:0;border:1px solid rgba(255,255,255,.08);animation:noteIn .25s ease;overflow:hidden;}
-  .radio-card.saved{border-color:rgba(18,183,106,.55);box-shadow:0 0 0 1px rgba(18,183,106,.22) inset;}
-  .radio-top{display:flex;align-items:center;gap:10px;padding:9px 13px;background:rgba(0,0,0,.18);}
-  .radio-ticket{font-family:var(--font-head);font-weight:700;font-size:11.5px;letter-spacing:.5px;background:var(--pink);color:#fff;padding:3px 8px;border-radius:5px;}
-  .radio-status{margin-left:auto;font-size:10.5px;font-weight:700;letter-spacing:.3px;color:#9fb0c2;text-transform:uppercase;}
-  .radio-card.saved .radio-status{color:#12b76a;}
-  .radio-live{display:flex;align-items:center;font-size:10.5px;color:#9fb0c2;text-transform:uppercase;letter-spacing:.4px;}
-  .live-dot{width:7px;height:7px;border-radius:50%;background:#ff4d6d;display:inline-block;margin-right:5px;animation:livepulse 1.4s ease-in-out infinite;}
-  @keyframes livepulse{0%,100%{opacity:1;}50%{opacity:.4;}}
-  .wave{display:flex;align-items:flex-end;gap:2px;height:16px;margin-left:auto;}
-  .wave i{width:3px;background:rgba(255,255,255,.5);border-radius:2px;display:block;animation:wavebar 1s ease-in-out infinite;}
-  .wave i:nth-child(1){height:6px;animation-delay:0s;}
-  .wave i:nth-child(2){height:12px;animation-delay:.15s;}
-  .wave i:nth-child(3){height:16px;animation-delay:.3s;}
-  .wave i:nth-child(4){height:10px;animation-delay:.45s;}
-  .wave i:nth-child(5){height:14px;animation-delay:.6s;}
-  @keyframes wavebar{0%,100%{transform:scaleY(.6);}50%{transform:scaleY(1);}}
-  .radio-body{padding:12px 13px 14px;}
-  .radio-field{display:flex;gap:9px;align-items:flex-start;margin-bottom:9px;}
-  .radio-field:last-child{margin-bottom:0;}
-  .radio-field .ico{flex-shrink:0;color:rgba(255,255,255,.45);margin-top:6px;}
-  .radio-field .field{flex:1;background:rgba(255,255,255,.07);border-radius:var(--r-sm);padding:7px 9px;min-height:18px;outline:none;font-size:12.5px;line-height:1.45;}
-  .radio-field .field:focus{background:rgba(255,255,255,.13);}
-  .radio-edit{display:block;}
-  .radio-card.saved .radio-edit{display:none;}
-  .radio-summary{margin:10px 0 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 10px;font-size:11.5px;line-height:1.45;color:#f2f6fb;white-space:pre-wrap;}
-  .radio-card.saved .radio-summary{background:rgba(18,183,106,.12);border-color:rgba(18,183,106,.22);}
-  .radio-add{background:var(--pink);color:#fff;border:none;border-radius:var(--r-sm);padding:11px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:var(--font-head);letter-spacing:.3px;transition:background .15s,transform .1s;}
-  .radio-add:hover{background:var(--pink-dark);}
-  .radio-add:active{transform:scale(.97);}
-
-  .telem{border:1px solid var(--line);border-radius:var(--r-md);padding:14px 16px;margin-bottom:10px;background:var(--surface-2);animation:noteIn .25s ease;}
-  .telem .who{display:flex;align-items:center;gap:6px;margin-bottom:8px;font-size:11px;color:var(--muted);}
-  .telem .name{border:none;border-bottom:1px dashed var(--faint);background:transparent;font-size:11px;font-weight:700;color:var(--navy-3);padding:1px 4px;min-width:70px;outline:none;}
-  .telem p{margin:0;font-size:13.5px;line-height:1.55;outline:none;}
-  .votes{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
-  .vote{border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s,transform .1s;}
-  .vote:hover{background:var(--surface-2);}
-  .vote:active{transform:scale(.95);}
-  .vote .count{background:var(--navy);color:#fff;border-radius:10px;padding:0 7px;font-size:11px;font-family:var(--font-head);display:inline-block;}
-  .vote .count.pulse{animation:pop .35s ease;}
-  @keyframes pop{0%{transform:scale(1);}50%{transform:scale(1.3);}100%{transform:scale(1);}}
-  .vote.confirm{color:var(--green);} .vote.deny{color:var(--pink-dark);} .vote.nuance{color:var(--amber);}
-
-  .podium{display:flex;align-items:flex-end;gap:12px;margin-bottom:20px;justify-content:center;}
-  .podium .step{flex:1;max-width:170px;border-radius:10px 10px 0 0;text-align:center;padding:12px 8px 10px;position:relative;transition:transform .2s;display:flex;flex-direction:column;align-items:center;}
-  .podium .step:hover{transform:translateY(-3px);}
-  .podium .trim{align-self:stretch;height:6px;border-radius:3px;margin-bottom:10px;background-image:repeating-linear-gradient(90deg,#00000055 0 5px,#ffffffaa 5px 10px);}
-  .medal{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:700;font-size:14px;margin-bottom:6px;box-shadow:0 2px 4px rgba(0,0,0,.18);}
-  .medal.gold{background:linear-gradient(145deg,#ffe58a,var(--gold));color:#4a3a00;}
-  .medal.silver{background:linear-gradient(145deg,#f1f3f5,var(--silver));color:#33383d;}
-  .medal.bronze{background:linear-gradient(145deg,#e8b98c,var(--bronze));color:#3a2410;}
-  .podium .trophy-ico{color:var(--gold);margin-bottom:2px;}
+  document.getElementById('addRadio').addEventListener('click', async ()=>{
+    const z3 = CONTENT.zones.find(z=>z.id==='zone3');
+    const toInput = document.getElementById('radioTo');
+    const messageInput = document.getElementById('radioMessage');
+    const fromInput = document.getElementById('radioFrom');
+    const para = (toInput.value || '').trim();
+    const mensaje = (messageInput.value || '').trim();
+    const de = (fromInput.value || '').trim();
+    if(!mensaje){
+      alert('Escribí el mensaje antes de enviarlo.');
+      return;
+    }
+    const state = await sendOp('radio_add', {
+      id: genId('radio'),
+      n: (document.getElementById('radiobox').querySelectorAll('.radio-card').length || 0) + 1,
+      para: para || z3.paraPh,
+      mensaje: mensaje,
+      de: de || z3.dePh
+    });
+    if(state){
+      toInput.value = '';
+      messageInput.value = '';
+      fromInput.value = '';
+      syncRadio(state.radio);
+      messageInput.focus();
+    }
+  });
   .podium .step small{display:block;font-weight:500;font-family:var(--font-body);font-size:10.5px;margin-top:6px;color:var(--muted);}
   .podium .step.p1{background:linear-gradient(180deg,#fff,#fdf3d9);height:150px;border:1px solid #f3dfa0;justify-content:flex-start;}
   .podium .step.p2{background:linear-gradient(180deg,#fff,#eef0f2);height:122px;border:1px solid var(--line);justify-content:flex-start;}
@@ -444,23 +342,21 @@ const API_BASE = '/api/state?session=' + encodeURIComponent(SESSION_ID);
 const POLL_INTERVAL_MS = 1800;
 const PRESENCE_PING_MS = 8000;
 const ONLINE_THRESHOLD_MS = 60000;
+let __pendingOps = 0;
 
 async function apiGet(){
   const res = await fetch(API_BASE, { cache: 'no-store' });
   if(!res.ok) throw new Error('GET falló: ' + res.status);
   return res.json();
 }
-async function apiPostBody(body){
+async function apiPost(op){
   const res = await fetch(API_BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    body: JSON.stringify({ op })
   });
   if(!res.ok) throw new Error('POST falló: ' + res.status);
   return res.json();
-}
-async function apiPost(op){
-  return apiPostBody({ op });
 }
 async function sendOp(type, payload){
   __pendingOps++;
@@ -477,25 +373,6 @@ async function sendOp(type, payload){
     __pendingOps = Math.max(0, __pendingOps - 1);
   }
 }
-async function sendOps(ops){
-  __pendingOps++;
-  try{
-    const bodyOps = ops.map(op=>({
-      type: op.type,
-      payload: Object.assign({ userId: MY_USER_ID }, op.payload || {})
-    }));
-    const state = await apiPostBody({ ops: bodyOps });
-    if(state) fullRender(state);
-    setSyncStatus(true);
-    return state;
-  }catch(e){
-    console.error('No se pudo sincronizar el lote de acciones', e);
-    setSyncStatus(false);
-    return null;
-  }finally{
-    __pendingOps = Math.max(0, __pendingOps - 1);
-  }
-}
 function setSyncStatus(ok){
   const dot = document.getElementById('syncDot');
   const label = document.querySelector('.sync-indicator');
@@ -505,7 +382,6 @@ function setSyncStatus(ok){
 
 /* ============================================================
    RENDER — arma el HTML a partir de CONTENT.
-   ============================================================ */
 document.getElementById('eyebrow').textContent = CONTENT.meta.eyebrow;
 document.getElementById('mainTitle').textContent = CONTENT.meta.title;
 document.getElementById('mainSub').textContent = CONTENT.meta.subtitle;
@@ -570,23 +446,24 @@ function radioCardHtml(z, n){
   return '<div class="radio-card">'+
     '<div class="radio-top"><span class="radio-ticket">MSG-'+String(n).padStart(2,'0')+'</span>'+
     '<span class="radio-live"><i class="live-dot"></i>en el aire</span>'+
-    '<span class="radio-status">borrador</span><div class="wave"><i></i><i></i><i></i><i></i><i></i></div></div>'+
+    '<div class="wave"><i></i><i></i><i></i><i></i><i></i></div></div>'+
     '<div class="radio-body">'+
-    '<div class="radio-edit">'+
     '<div class="radio-field"><span class="ico">'+iconSvg('person',17)+'</span><div class="field" contenteditable="true">'+esc(z.paraPh)+'</div></div>'+
     '<div class="radio-field"><span class="ico">'+iconSvg('message',17)+'</span><div class="field" contenteditable="true">'+esc(z.msgPh)+'</div></div>'+
     '<div class="radio-field"><span class="ico">'+iconSvg('pen',17)+'</span><div class="field" contenteditable="true">'+esc(z.dePh)+'</div></div>'+
-    '</div>'+
-    '<div class="radio-summary">Borrador sin enviar</div>'+
-    '<button type="button" class="radio-add radio-save" style="width:100%;margin-top:12px">Enviar mensaje</button>'+
     '</div></div>';
 }
 
 function renderZone3(z){
   return '<div class="zone" id="'+z.id+'">'+zoneHead(z)+
     '<div class="zone-body">'+timerWidgetHtml(z)+'<p class="hint">'+esc(z.hint)+'</p>'+
-    '<div class="postbox" id="radiobox"></div>'+
-    '<button class="radio-add" id="addRadio" style="margin-top:12px">'+esc(z.addLabel)+'</button></div></div>';
+    '<div class="radio-compose">'+
+      '<div class="radio-field"><span class="ico">'+iconSvg('person',17)+'</span><input id="radioTo" class="field" type="text" placeholder="'+esc(z.paraPh)+'"></div>'+
+      '<div class="radio-field"><span class="ico">'+iconSvg('message',17)+'</span><textarea id="radioMessage" class="field" rows="3" placeholder="'+esc(z.msgPh)+'"></textarea></div>'+
+      '<div class="radio-field"><span class="ico">'+iconSvg('pen',17)+'</span><input id="radioFrom" class="field" type="text" placeholder="'+esc(z.dePh)+'"></div>'+
+      '<button class="radio-add" id="addRadio" style="width:100%;margin-top:8px">'+esc(z.addLabel)+'</button>'+
+    '</div>'+
+    '<div class="radio-feed" id="radiobox"></div></div></div>';
 }
 
 function telemCardHtml(z){
@@ -892,121 +769,15 @@ function syncNotesZone(zoneId, list){
 /* ============================================================
    RADIO AL BOX
    ============================================================ */
-const radioDrafts = Object.create(null);
-
-function readRadioFields(el){
-  const fields = el.querySelectorAll('.radio-field .field');
-  return {
-    para: (fields[0] && fields[0].textContent || '').trim(),
-    mensaje: (fields[1] && fields[1].textContent || '').trim(),
-    de: (fields[2] && fields[2].textContent || '').trim()
-  };
-}
-
-function writeRadioFields(el, radio){
-  const fields = el.querySelectorAll('.radio-field .field');
-  const vals = [radio.para, radio.mensaje, radio.de];
-  fields.forEach((f,i)=>{
-    if(f.textContent !== (vals[i] || '')) f.textContent = vals[i] || '';
-  });
-}
-
-function setRadioSaveLabel(el){
-  const btn = el.querySelector('.radio-save');
-  if(!btn) return;
-  const draft = radioDrafts[el.dataset.id] || {};
-  btn.textContent = draft.isNew ? 'Enviar mensaje' : 'Guardar cambios';
-}
-
-function setRadioSavedState(el, saved){
-  const btn = el.querySelector('.radio-save');
-  const status = el.querySelector('.radio-status');
-  el.classList.toggle('saved', !!saved);
-  if(btn){
-    const draft = radioDrafts[el.dataset.id] || {};
-    btn.textContent = saved ? 'Editar mensaje' : (draft.isNew ? 'Enviar mensaje' : 'Guardar cambios');
-  }
-  if(status){
-    status.textContent = saved ? 'enviado' : 'borrador';
-  }
-}
-
-function updateRadioSummary(el, radio){
-  const summary = el.querySelector('.radio-summary');
-  if(!summary) return;
-  const para = (radio.para || '').trim();
-  const mensaje = (radio.mensaje || '').trim();
-  const de = (radio.de || '').trim();
-  summary.textContent = para || mensaje || de
-    ? 'Para: ' + (para || '—') + '\nMensaje: ' + (mensaje || '—') + '\nDe: ' + (de || '—')
-    : 'Borrador sin enviar';
-}
-
-function markRadioDraft(el, extra){
-  const id = el.dataset.id;
-  radioDrafts[id] = Object.assign({}, radioDrafts[id] || {}, extra || {}, {
-    dirty: true,
-    values: readRadioFields(el)
-  });
-  setRadioSaveLabel(el);
-}
-
-function mountRadioCard(el, id, opts){
-  opts = opts || {};
+function mountRadioCard(el, id){
   el.dataset.id = id;
-  el.dataset.n = String(opts.n || 0);
-  if(!radioDrafts[id]) radioDrafts[id] = { dirty: false, isNew: !!opts.isNew, values: readRadioFields(el) };
-  else radioDrafts[id].isNew = !!opts.isNew;
   const fields = el.querySelectorAll('.radio-field .field');
-  fields.forEach((f)=>{
-    f.addEventListener('input', ()=>{
-      markRadioDraft(el, { isNew: !!radioDrafts[id].isNew });
+  const keys = ['para','mensaje','de'];
+  fields.forEach((f, i)=>{
+    f.addEventListener('blur', ()=>{
+      sendOp('radio_edit', { id: id, field: keys[i], text: f.textContent.trim() });
     });
   });
-  const saveBtn = el.querySelector('.radio-save');
-  if(saveBtn){
-    saveBtn.addEventListener('click', async ()=>{
-      const draft = radioDrafts[id] || { isNew: !!opts.isNew };
-      if(el.classList.contains('saved') && !draft.dirty){
-        setRadioSavedState(el, false);
-        setRadioSaveLabel(el);
-        const firstField = el.querySelector('.radio-field .field');
-        if(firstField) firstField.focus();
-        return;
-      }
-      const values = readRadioFields(el);
-      if(!values.mensaje){
-        alert('Escribí el mensaje antes de enviarlo.');
-        return;
-      }
-      let state = null;
-      if(draft.isNew){
-        state = await sendOp('radio_add', {
-          id: id,
-          n: parseInt(el.dataset.n, 10) || 1,
-          para: values.para,
-          mensaje: values.mensaje,
-          de: values.de
-        });
-      } else {
-        state = await sendOps([
-          { type: 'radio_edit', payload: { id: id, field: 'para', text: values.para } },
-          { type: 'radio_edit', payload: { id: id, field: 'mensaje', text: values.mensaje } },
-          { type: 'radio_edit', payload: { id: id, field: 'de', text: values.de } }
-        ]);
-      }
-      if(state){
-        radioDrafts[id] = { dirty: false, isNew: false, values: values };
-        setRadioSavedState(el, true);
-        setRadioSaveLabel(el);
-        updateRadioSummary(el, values);
-        writeRadioFields(el, values);
-        syncRadio(state.radio);
-      }
-    });
-  }
-  setRadioSaveLabel(el);
-  setRadioSavedState(el, false);
 }
 function syncRadio(list){
   const box = document.getElementById('radiobox');
@@ -1017,17 +788,14 @@ function syncRadio(list){
       const holder = document.createElement('div');
       holder.innerHTML = radioCardHtml(z3, r.n);
       el = holder.firstElementChild;
-      mountRadioCard(el, r.id, { isNew: false, n: r.n });
+      mountRadioCard(el, r.id);
       box.appendChild(el);
     }
-    el.dataset.n = String(r.n || 0);
-    const draft = radioDrafts[r.id];
-    if(draft && draft.dirty) return;
-    writeRadioFields(el, r);
-    updateRadioSummary(el, r);
-    radioDrafts[r.id] = { dirty: false, isNew: false, values: readRadioFields(el) };
-    setRadioSavedState(el, true);
-    setRadioSaveLabel(el);
+    const fields = el.querySelectorAll('.radio-field .field');
+    const vals = [r.para, r.mensaje, r.de];
+    fields.forEach((f,i)=>{
+      if(document.activeElement !== f && f.textContent !== (vals[i]||'')) f.textContent = vals[i] || '';
+    });
   });
 }
 document.getElementById('addRadio').addEventListener('click', ()=>{
@@ -1038,10 +806,9 @@ document.getElementById('addRadio').addEventListener('click', ()=>{
   const holder = document.createElement('div');
   holder.innerHTML = radioCardHtml(z3, n);
   const el = holder.firstElementChild;
-  mountRadioCard(el, id, { isNew: true, n: n });
+  mountRadioCard(el, id);
   box.appendChild(el);
-  const messageField = el.querySelectorAll('.radio-field .field')[1];
-  if(messageField) messageField.focus();
+  sendOp('radio_add', { id: id, n: n, para: z3.paraPh, mensaje: z3.msgPh, de: z3.dePh });
 });
 
 /* ============================================================
@@ -1616,7 +1383,6 @@ document.querySelectorAll('.zt-reset').forEach(btn=>{
 let __epoch = null;
 let __polling = false;
 let __lastRevision = -1;
-let __pendingOps = 0;
 
 function fullRender(state){
   const incomingRevision = typeof state.revision === 'number' ? state.revision : 0;
