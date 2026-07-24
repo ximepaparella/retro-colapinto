@@ -170,6 +170,10 @@
   .radio-field .ico{flex-shrink:0;color:rgba(255,255,255,.45);margin-top:6px;}
   .radio-field .field{flex:1;background:rgba(255,255,255,.07);border-radius:var(--r-sm);padding:7px 9px;min-height:18px;outline:none;font-size:12.5px;line-height:1.45;}
   .radio-field .field:focus{background:rgba(255,255,255,.13);}
+  .radio-edit{display:block;}
+  .radio-card.saved .radio-edit{display:none;}
+  .radio-summary{margin:10px 0 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:8px 10px;font-size:11.5px;line-height:1.45;color:#f2f6fb;white-space:pre-wrap;}
+  .radio-card.saved .radio-summary{background:rgba(18,183,106,.12);border-color:rgba(18,183,106,.22);}
   .radio-add{background:var(--pink);color:#fff;border:none;border-radius:var(--r-sm);padding:11px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:var(--font-head);letter-spacing:.3px;transition:background .15s,transform .1s;}
   .radio-add:hover{background:var(--pink-dark);}
   .radio-add:active{transform:scale(.97);}
@@ -568,9 +572,12 @@ function radioCardHtml(z, n){
     '<span class="radio-live"><i class="live-dot"></i>en el aire</span>'+
     '<span class="radio-status">borrador</span><div class="wave"><i></i><i></i><i></i><i></i><i></i></div></div>'+
     '<div class="radio-body">'+
+    '<div class="radio-edit">'+
     '<div class="radio-field"><span class="ico">'+iconSvg('person',17)+'</span><div class="field" contenteditable="true">'+esc(z.paraPh)+'</div></div>'+
     '<div class="radio-field"><span class="ico">'+iconSvg('message',17)+'</span><div class="field" contenteditable="true">'+esc(z.msgPh)+'</div></div>'+
     '<div class="radio-field"><span class="ico">'+iconSvg('pen',17)+'</span><div class="field" contenteditable="true">'+esc(z.dePh)+'</div></div>'+
+    '</div>'+
+    '<div class="radio-summary">Borrador sin enviar</div>'+
     '<button type="button" class="radio-add radio-save" style="width:100%;margin-top:12px">Enviar mensaje</button>'+
     '</div></div>';
 }
@@ -912,19 +919,27 @@ function setRadioSaveLabel(el){
 }
 
 function setRadioSavedState(el, saved){
-  const fields = el.querySelectorAll('.radio-field .field');
   const btn = el.querySelector('.radio-save');
   const status = el.querySelector('.radio-status');
   el.classList.toggle('saved', !!saved);
-  fields.forEach(f=>{
-    f.setAttribute('contenteditable', saved ? 'false' : 'true');
-  });
   if(btn){
-    btn.textContent = saved ? 'Editar mensaje' : 'Enviar mensaje';
+    const draft = radioDrafts[el.dataset.id] || {};
+    btn.textContent = saved ? 'Editar mensaje' : (draft.isNew ? 'Enviar mensaje' : 'Guardar cambios');
   }
   if(status){
     status.textContent = saved ? 'enviado' : 'borrador';
   }
+}
+
+function updateRadioSummary(el, radio){
+  const summary = el.querySelector('.radio-summary');
+  if(!summary) return;
+  const para = (radio.para || '').trim();
+  const mensaje = (radio.mensaje || '').trim();
+  const de = (radio.de || '').trim();
+  summary.textContent = para || mensaje || de
+    ? 'Para: ' + (para || '—') + '\nMensaje: ' + (mensaje || '—') + '\nDe: ' + (de || '—')
+    : 'Borrador sin enviar';
 }
 
 function markRadioDraft(el, extra){
@@ -952,6 +967,13 @@ function mountRadioCard(el, id, opts){
   if(saveBtn){
     saveBtn.addEventListener('click', async ()=>{
       const draft = radioDrafts[id] || { isNew: !!opts.isNew };
+      if(el.classList.contains('saved') && !draft.dirty){
+        setRadioSavedState(el, false);
+        setRadioSaveLabel(el);
+        const firstField = el.querySelector('.radio-field .field');
+        if(firstField) firstField.focus();
+        return;
+      }
       const values = readRadioFields(el);
       if(!values.mensaje){
         alert('Escribí el mensaje antes de enviarlo.');
@@ -977,6 +999,7 @@ function mountRadioCard(el, id, opts){
         radioDrafts[id] = { dirty: false, isNew: false, values: values };
         setRadioSavedState(el, true);
         setRadioSaveLabel(el);
+        updateRadioSummary(el, values);
         writeRadioFields(el, values);
         syncRadio(state.radio);
       }
@@ -1001,6 +1024,7 @@ function syncRadio(list){
     const draft = radioDrafts[r.id];
     if(draft && draft.dirty) return;
     writeRadioFields(el, r);
+    updateRadioSummary(el, r);
     radioDrafts[r.id] = { dirty: false, isNew: false, values: readRadioFields(el) };
     setRadioSavedState(el, true);
     setRadioSaveLabel(el);
