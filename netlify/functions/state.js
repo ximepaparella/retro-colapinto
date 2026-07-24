@@ -124,14 +124,18 @@ exports.handler = async (event) => {
     // Respaldo manual por si connectLambda no alcanza en algún entorno
     // particular: si existen BLOBS_SITE_ID / BLOBS_TOKEN como variables
     // de entorno, se usan explícitamente.
-    // consistency: "strong" es clave acá: por default Netlify Blobs usa
-    // consistencia eventual (una escritura puede tardar hasta 60s en
-    // propagarse a todas las regiones), lo que puede hacer que una
-    // lectura vea un ETag desactualizado justo antes de escribir. Con
-    // "strong" nos aseguramos de leer siempre el último valor real,
-    // para que el onlyIfMatch de writeWithRetry compare contra la
-    // versión correcta y nunca pise un cambio de otra persona.
-    const storeOpts = { name: "pitstop-sessions", consistency: "strong" };
+    // OJO con consistency:"strong": en funciones con la firma clásica
+    // (exports.handler + connectLambda) el contexto que arma Netlify no
+    // trae la propiedad interna que "strong" necesita, y la lectura
+    // explota con "uncachedEdgeURL". Por eso NO lo activamos acá.
+    // No hace falta: la seguridad ante escrituras simultáneas no depende
+    // de la consistencia de la LECTURA sino de que el guardado sea
+    // condicional al ETag (onlyIfMatch/onlyIfNew, ver writeWithRetry).
+    // Si una lectura llega a ver un ETag viejo, el guardado
+    // simplemente falla con modified:false y reintentamos con el dato
+    // más fresco — nunca se pisa ni se pierde un cambio, en eventual o
+    // en strong consistency.
+    const storeOpts = { name: "pitstop-sessions" };
     if (process.env.BLOBS_SITE_ID && process.env.BLOBS_TOKEN) {
       storeOpts.siteID = process.env.BLOBS_SITE_ID;
       storeOpts.token = process.env.BLOBS_TOKEN;
