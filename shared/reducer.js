@@ -112,6 +112,11 @@ function applyOp(state, op) {
       };
       break;
     }
+    case "presence_leave": {
+      if (!p.userId) break;
+      delete s.presence[p.userId];
+      break;
+    }
 
     /* ---------- timers sincronizados por etapa ---------- */
     case "timer_start": {
@@ -296,9 +301,6 @@ function applyOp(state, op) {
       const fresh = initialState(s.sessionId);
       fresh.createdAt = s.createdAt;
       fresh.epoch = (s.epoch || 0) + 1;
-      // La gente sigue conectada aunque se reinicie el contenido: no
-      // tiene sentido que desaparezcan de la lista de presencia.
-      fresh.presence = s.presence;
       return { ...fresh, updatedAt: ts };
     }
 

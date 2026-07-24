@@ -28,6 +28,7 @@ const { getStore, connectLambda } = require("@netlify/blobs");
 const { initialState, applyOp } = require("../../shared/reducer.js");
 
 const MAX_RETRIES = 10;
+const PRESENCE_TTL_MS = 2 * 60 * 1000;
 
 function cleanSessionId(raw) {
   const v = (raw || "default").toString().trim();
@@ -37,6 +38,19 @@ function cleanSessionId(raw) {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function prunePresence(state, now = Date.now()) {
+  if (!state || !state.presence) return state;
+  let changed = false;
+  for (const [userId, user] of Object.entries(state.presence)) {
+    const lastSeenMs = new Date(user.lastSeen).getTime();
+    if (!Number.isFinite(lastSeenMs) || now - lastSeenMs > PRESENCE_TTL_MS) {
+      delete state.presence[userId];
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 /**
@@ -51,6 +65,7 @@ async function readState(store, key, sessionId) {
     if (typeof state.revision !== "number") {
       state.revision = 0;
     }
+    prunePresence(state);
     return { state, etag: existing.etag };
   }
   return { state: initialState(sessionId), etag: null };

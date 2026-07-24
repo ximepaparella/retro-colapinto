@@ -263,6 +263,7 @@
     <p class="sub" id="mainSub"></p>
     <div class="badges" id="badges"></div>
     <div class="session-tools" id="sessionTools">
+      <button type="button" id="disconnectBtn" class="tool-btn" title="Te saca de la lista de pilotos en pista hasta que vuelvas a entrar">👋 Desconectarme</button>
       <button type="button" id="resetSessionBtn" class="tool-btn" title="Borra todo para todo el equipo y arranca de cero">🔄 Reiniciar sesión</button>
       <button type="button" id="exportSessionBtn" class="tool-btn" title="Descarga el estado actual como archivo JSON">⬇️ Exportar sesión</button>
       <span class="sync-indicator"><i id="syncDot" class="sync-dot"></i>Conectado</span>
@@ -435,6 +436,7 @@ const SESSION_ID = getSessionId();
 const API_BASE = '/api/state?session=' + encodeURIComponent(SESSION_ID);
 const POLL_INTERVAL_MS = 1800;
 const PRESENCE_PING_MS = 8000;
+const ONLINE_THRESHOLD_MS = 60000;
 
 async function apiGet(){
   const res = await fetch(API_BASE, { cache: 'no-store' });
@@ -451,6 +453,7 @@ async function apiPost(op){
   return res.json();
 }
 async function sendOp(type, payload){
+  __pendingOps++;
   try{
     const state = await apiPost({ type: type, payload: Object.assign({ userId: MY_USER_ID }, payload) });
     if(state) fullRender(state);
@@ -460,6 +463,8 @@ async function sendOp(type, payload){
     console.error('No se pudo sincronizar la acción "'+type+'"', e);
     setSyncStatus(false);
     return null;
+  }finally{
+    __pendingOps = Math.max(0, __pendingOps - 1);
   }
 }
 function setSyncStatus(ok){
@@ -636,6 +641,47 @@ function setUser(user){
   try{ localStorage.setItem('pitstopUser', JSON.stringify(user)); }catch(e){}
   renderMeBadge();
   pingPresence();
+}
+
+function clearSavedUser(){
+  try{ localStorage.removeItem('pitstopUser'); }catch(e){}
+}
+
+function removeMeBadge(){
+  const badge = document.getElementById('meBadge');
+  if(badge) badge.remove();
+}
+
+function disconnectPayload(){
+  return { op: { type: 'presence_leave', payload: { userId: MY_USER_ID } } };
+}
+
+function sendDisconnectBeacon(){
+  if(!navigator.sendBeacon) return false;
+  try{
+    const payload = JSON.stringify(disconnectPayload());
+    return navigator.sendBeacon(API_BASE, new Blob([payload], { type: 'application/json' }));
+  }catch(e){
+    return false;
+  }
+}
+
+async function disconnectCurrentUser(options){
+  options = options || {};
+  const clearIdentity = options.clearIdentity !== false;
+  delete lastPresenceData[MY_USER_ID];
+  if(currentUser){
+    await sendOp('presence_leave', { userId: MY_USER_ID });
+  }
+  currentUser = null;
+  if(clearIdentity) clearSavedUser();
+  removeMeBadge();
+  renderPresence(lastPresenceData);
+  if(options.reopenJoinModal){
+    const existing = document.getElementById('joinOverlay');
+    if(existing) existing.remove();
+    buildJoinModal();
+  }
 }
 
 function renderMeBadge(){
@@ -1265,8 +1311,6 @@ try{
    Se actualiza sola con cada ping (cada ~5s) y se puede minimizar
    para que no moleste durante la retro.
    ============================================================ */
-const ONLINE_THRESHOLD_MS = 20000; // tolera tabs en background, throttling del navegador y algo de jitter de red
-
 function buildPresenceWidget(){
   const widget = document.createElement('div');
   widget.className = 'presence-widget';
@@ -1294,25 +1338,25 @@ function renderPresence(presence){
   const body = document.getElementById('presenceBody');
   const countEl = document.getElementById('presenceCount');
   if(!body || !countEl) return;
-  const entries = Object.entries(lastPresenceData);
-  if(entries.length === 0){
+  const now = Date.now();
+  const onlineEntries = Object.entries(lastPresenceData).filter(([, u])=>{
+    const lastSeenMs = new Date(u.lastSeen).getTime();
+    return Number.isFinite(lastSeenMs) && (now - lastSeenMs) < ONLINE_THRESHOLD_MS;
+  });
+  if(onlineEntries.length === 0){
     body.innerHTML = '<p class="presence-empty">Todavía nadie se identificó.</p>';
     countEl.textContent = '0';
     return;
   }
-  entries.sort((a,b)=> (a[1].name||'').localeCompare(b[1].name||''));
-  const now = Date.now();
-  let onlineCount = 0;
-  body.innerHTML = entries.map(([uid, u])=>{
-    const online = (now - new Date(u.lastSeen).getTime()) < ONLINE_THRESHOLD_MS;
-    if(online) onlineCount++;
-    return '<div class="presence-row '+(online?'online':'offline')+'">'+
+  onlineEntries.sort((a,b)=> (a[1].name||'').localeCompare(b[1].name||''));
+  body.innerHTML = onlineEntries.map(([uid, u])=>{
+    return '<div class="presence-row online">'+
       '<span class="presence-dot"></span>'+
       helmetSvg(u.color, 18)+
-      '<span class="presence-name">'+esc(u.name)+(online?'':' (desconectado)')+'</span>'+
+      '<span class="presence-name">'+esc(u.name)+'</span>'+
       '</div>';
   }).join('');
-  countEl.textContent = String(onlineCount) + '/' + entries.length;
+  countEl.textContent = String(onlineEntries.length);
 }
 // Refresca online/offline aunque no llegue estado nuevo: el tiempo sigue pasando.
 setInterval(()=> renderPresence(lastPresenceData), 2000);
@@ -1326,6 +1370,9 @@ document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState === 'visible') pingPresence();
 });
 window.addEventListener('focus', ()=>{ pingPresence(); });
+window.addEventListener('pagehide', ()=>{
+  if(currentUser) sendDisconnectBeacon();
+});
 
 /* ============================================================
    TIMERS SINCRONIZADOS POR ETAPA — cuando se acaba el tiempo,
@@ -1426,9 +1473,11 @@ document.querySelectorAll('.zt-reset').forEach(btn=>{
 let __epoch = null;
 let __polling = false;
 let __lastRevision = -1;
+let __pendingOps = 0;
 
 function fullRender(state){
   const incomingRevision = typeof state.revision === 'number' ? state.revision : 0;
+  if(__pendingOps > 0 && incomingRevision <= __lastRevision) return;
   if(incomingRevision < __lastRevision) return;
   __lastRevision = incomingRevision;
   if(window.__syncGauge) window.__syncGauge(state.gauge);
@@ -1481,6 +1530,7 @@ async function pollOnce(){
   try{
     const state = await apiGet();
     if(__epoch !== null && state.epoch !== __epoch){
+      clearSavedUser();
       location.reload();
       return;
     }
@@ -1495,8 +1545,14 @@ async function pollOnce(){
 
 boot();
 
+document.getElementById('disconnectBtn').addEventListener('click', async ()=>{
+  if(!currentUser) return;
+  await disconnectCurrentUser({ clearIdentity: true, reopenJoinModal: true });
+});
+
 document.getElementById('resetSessionBtn').addEventListener('click', async ()=>{
   if(!confirm('¿Reiniciar toda la sesión? Se borran notas, votos, radio y podio para todo el equipo. No se puede deshacer.')) return;
+  clearSavedUser();
   await sendOp('reset_session', {});
   location.reload();
 });
